@@ -8,10 +8,9 @@ export const Credentials = v.object({
 export type CredentialsOutput = v.Output<typeof Credentials>;
 export type CredentialsInput = v.Input<typeof Credentials>;
 
-export const Tokens = v.object({
-  access_token: v.optional(v.string()),
-  refresh_token: v.optional(v.string()),
+export const Token = v.object({
+  refresh_token: v.string(),
 });
 
-export type TokensOutput = v.Output<typeof Tokens>;
-export type TokensInput = v.Input<typeof Tokens>;
+export type TokensOutput = v.Output<typeof Token>;
+export type TokensInput = v.Input<typeof Token>;

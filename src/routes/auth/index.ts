@@ -2,7 +2,8 @@ import bcrypt from "bcrypt";
 import { type Request, type Response, Router } from "express";
 import jwt from "jsonwebtoken";
 import { safeParseAsync } from "valibot";
-import { Credentials, type CredentialsOutput, Tokens } from "./validation";
+import cookieToBody from "../../middlewares/cookie-to-body";
+import { Credentials, type CredentialsOutput, Token } from "./validation";
 
 const users: CredentialsOutput[] = [];
 
@@ -81,7 +82,8 @@ auth.post("/sign-in", async (req: Request, res: Response) => {
     algorithm: "HS256",
     expiresIn: "30m",
   });
-  const refreshToken = jwt.sign({}, process.env.JWT_SECRET ?? "", {
+
+  const refreshToken = jwt.sign(payload, process.env.JWT_SECRET ?? "", {
     algorithm: "HS256",
     expiresIn: "30d",
   });
@@ -102,16 +104,49 @@ auth.post("/sign-in", async (req: Request, res: Response) => {
   });
 });
 
-auth.post("/refresh", async (req: Request, res: Response) => {
-  const requestBody = await safeParseAsync(Tokens, req.body);
+auth.post("/refresh", cookieToBody, async (req: Request, res: Response) => {
+  const requestBody = await safeParseAsync(Token, req.body);
 
   if (!requestBody.success) {
     return res.status(400).json({ error: requestBody.issues });
   }
 
-  const bodyTokens = requestBody.output;
-  const access_token = req.cookies.access_token;
-  const refresh_token = req.cookies.refresh_token;
+  const { refresh_token } = requestBody.output;
+
+  try {
+    const decoded = jwt.verify(refresh_token, process.env.JWT_SECRET ?? "");
+
+    const payload = {
+      email: (decoded as jwt.JwtPayload).email,
+    };
+
+    const accessToken = jwt.sign(payload, process.env.JWT_SECRET ?? "", {
+      algorithm: "HS256",
+      expiresIn: "30m",
+    });
+
+    const refreshToken = jwt.sign(payload, process.env.JWT_SECRET ?? "", {
+      algorithm: "HS256",
+      expiresIn: "30d",
+    });
+
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res.status(200).json({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid refresh token" });
+  }
 });
 
 export default auth;

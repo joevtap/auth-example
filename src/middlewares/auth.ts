@@ -1,25 +1,14 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-export default function (req: Request, res: Response, next: NextFunction) {
-  const access_token = req.cookies.access_token;
+export default async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const bearerToken = req.headers.authorization
     ? req.headers.authorization?.split(" ")[1]
     : null;
-
-  if (access_token) {
-    try {
-      const decoded = jwt.verify(access_token, process.env.JWT_SECRET ?? "");
-
-      res.locals = {
-        user: decoded,
-      };
-
-      next();
-    } catch (error) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-  }
 
   if (bearerToken) {
     try {
@@ -35,5 +24,5 @@ export default function (req: Request, res: Response, next: NextFunction) {
     }
   }
 
-  next();
+  return res.status(401).json({ message: "Unauthorized" });
 }
