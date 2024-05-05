@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { type Request, type Response, Router } from "express";
 import jwt from "jsonwebtoken";
 import { safeParseAsync } from "valibot";
-import { Credentials, type CredentialsOutput } from "./validation";
+import { Credentials, type CredentialsOutput, Tokens } from "./validation";
 
 const users: CredentialsOutput[] = [];
 
@@ -100,6 +100,18 @@ auth.post("/sign-in", async (req: Request, res: Response) => {
     access_token: accessToken,
     refresh_token: refreshToken,
   });
+});
+
+auth.post("/refresh", async (req: Request, res: Response) => {
+  const requestBody = await safeParseAsync(Tokens, req.body);
+
+  if (!requestBody.success) {
+    return res.status(400).json({ error: requestBody.issues });
+  }
+
+  const bodyTokens = requestBody.output;
+  const access_token = req.cookies.access_token;
+  const refresh_token = req.cookies.refresh_token;
 });
 
 export default auth;
