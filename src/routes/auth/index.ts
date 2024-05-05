@@ -145,7 +145,12 @@ auth.post("/refresh", cookieToBody, async (req: Request, res: Response) => {
       refresh_token: refreshToken,
     });
   } catch (error) {
-    return res.status(403).json({ message: "Invalid refresh token" });
+    return res.status(401).json({
+      message: "Unauthorized",
+      details: {
+        error: "Invalid refresh token",
+      },
+    });
   }
 });
 
